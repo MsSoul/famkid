@@ -1,7 +1,7 @@
 // filename: close.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // For closing the app
-import 'services/app_management_service.dart'; // Import your service
+//import 'services/app_management_service.dart'; // Import your service
 
 class CloseScreen extends StatefulWidget {
   final String childId;
@@ -13,7 +13,7 @@ class CloseScreen extends StatefulWidget {
 }
 
 class CloseScreenState extends State<CloseScreen> {
-  final AppManagementService appService = AppManagementService();
+ // final AppManagementService appService = AppManagementService();
 
   @override
   void initState() {
@@ -52,7 +52,7 @@ class CloseScreenState extends State<CloseScreen> {
               ElevatedButton(
                 onPressed: () async {
                   // Fetch and block apps before closing
-                  await appService.fetchAndApplyAppSettings(widget.childId);  // Use widget.childId
+                 // await appService.fetchAndApplyAppSettings(widget.childId);  // Use widget.childId
                   SystemNavigator.pop(); // Close the app UI without terminating background services
                 },
                 style: Theme.of(context).elevatedButtonTheme.style, // Use the theme's elevated button style
