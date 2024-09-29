@@ -1,7 +1,9 @@
 // filename: close.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Correct Flutter imports
 import 'package:flutter/services.dart'; // For closing the app
-//import 'services/app_management_service.dart'; // Import your service
+import 'package:mongo_dart/mongo_dart.dart' as mongo; // Import MongoDB ObjectId and prefix as mongo
+import '../algorithm/tokenbucket.dart'; // Import TokenBucket class
+import '../services/remaining_time_service.dart'; // Import your RemainingTimeService class
 
 class CloseScreen extends StatefulWidget {
   final String childId;
@@ -13,16 +15,45 @@ class CloseScreen extends StatefulWidget {
 }
 
 class CloseScreenState extends State<CloseScreen> {
- // final AppManagementService appService = AppManagementService();
+  late RemainingTimeService remainingTimeService;
+  late TokenBucket tokenBucket;
+  final mongo.ObjectId slotIdentifier = mongo.ObjectId(); // Use prefixed ObjectId from mongo_dart
 
   @override
   void initState() {
     super.initState();
-    // Automatically navigate to the close confirmation screen when the widget is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showProtectionSuccessDialog();
-    });
+    fetchTimeSlotDetails(); // Fetch time slot details from the backend
   }
+
+  // Fetch maxTime and refillRate from backend
+void fetchTimeSlotDetails() async {
+  try {
+    // Fetch the TokenBucket for the given slotIdentifier
+    final tokenBucket = await remainingTimeService.getTokenBucket(slotIdentifier);
+
+    // Check the remaining time and decide whether to lock/unlock the device
+    tokenBucket.updateRemainingTime(); // Ensure the remaining time is updated
+
+    if (tokenBucket.tokens > 0) {
+      tokenBucket.unlockDevice(); // Unlock the device if tokens (remaining time) are available
+    } else {
+      if (mounted) {
+        // Check if the widget is still mounted before accessing BuildContext
+        tokenBucket.lockDevice(context, widget.childId); // Lock the device if no remaining time
+      }
+    }
+
+    // After async operation, check if the widget is still mounted before navigating
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showProtectionSuccessDialog();
+      });
+    }
+  } catch (error) {
+    // Use debugPrint instead of print in production
+    debugPrint('Error fetching token bucket details: $error');
+  }
+}
 
   // Display a success dialog after protection is applied
   void _showProtectionSuccessDialog() {
@@ -51,8 +82,15 @@ class CloseScreenState extends State<CloseScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
-                  // Fetch and block apps before closing
-                 // await appService.fetchAndApplyAppSettings(widget.childId);  // Use widget.childId
+                  // Update remaining time and lock/unlock logic based on tokens
+                  tokenBucket.updateRemainingTime(); // Update tokens based on time passed
+
+                  if (tokenBucket.tokens == 0) {
+                    tokenBucket.lockDevice(context, widget.childId); // Lock device if no tokens
+                  } else {
+                    tokenBucket.unlockDevice(); // Unlock device if tokens are available
+                  }
+
                   SystemNavigator.pop(); // Close the app UI without terminating background services
                 },
                 style: Theme.of(context).elevatedButtonTheme.style, // Use the theme's elevated button style
@@ -74,7 +112,6 @@ class CloseScreenState extends State<CloseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Empty build method since the dialog will automatically be shown on init
     return const Scaffold(
       body: Center(
         child: CircularProgressIndicator(), // Show loading spinner while waiting for dialog
