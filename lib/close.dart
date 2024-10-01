@@ -1,7 +1,7 @@
 // filename: close.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // For closing the app
-import 'services/app_management_service.dart'; // Import your service
+import '../services/protection_service.dart'; // Import the ProtectionService
+import '../design/theme.dart'; // Import your custom theme for consistent styling
 
 class CloseScreen extends StatefulWidget {
   final String childId;
@@ -13,22 +13,40 @@ class CloseScreen extends StatefulWidget {
 }
 
 class CloseScreenState extends State<CloseScreen> {
-  final AppManagementService appService = AppManagementService();
+  final ProtectionService _protectionService = ProtectionService(); // Initialize ProtectionService
+  bool _isLoading = false; // Manage loading state for the button
 
-  @override
-  void initState() {
-    super.initState();
-    // Automatically navigate to the close confirmation screen when the widget is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showProtectionSuccessDialog();
-    });
+  // Trigger protection logic when the close button is pressed
+  Future<void> _applyProtection() async {
+  setState(() {
+    _isLoading = true;  // Start loading
+  });
+
+  try {
+    // Log that protection is being applied
+    debugPrint('Applying protection for childId: ${widget.childId}');
+    
+    // Trigger protection logic (lock/unlock the device)
+    await _protectionService.applyProtection(widget.childId, context);
+    
+  } catch (error) {
+    debugPrint('Error applying protection: $error');
+    _showErrorDialog(context, error.toString());
+  } finally {
+    // Ensure loading is stopped in both success and failure cases
+    if (mounted) {
+      setState(() {
+        _isLoading = false; // Stop loading
+      });
+    }
   }
+}
 
-  // Display a success dialog after protection is applied
-  void _showProtectionSuccessDialog() {
+  // Show an error dialog if protection fails
+  void _showErrorDialog(BuildContext context, String errorMessage) {
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent closing by tapping outside the dialog
+      barrierDismissible: true,  // Allow closing the dialog by tapping outside
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
@@ -39,30 +57,29 @@ class CloseScreenState extends State<CloseScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Device successfully protected!',
-                style: TextStyle(
-                  fontSize: 22.0,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Georgia',
-                  color: Colors.black,
-                ),
+                'Error occurred!',
+                style: TextStyle(fontSize: 22.0, fontWeight: FontWeight.bold, color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                errorMessage,
+                style: const TextStyle(fontSize: 16.0),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () async {
-                  // Fetch and block apps before closing
-                  await appService.fetchAndApplyAppSettings(widget.childId);  // Use widget.childId
-                  SystemNavigator.pop(); // Close the app UI without terminating background services
+                onPressed: () {
+                  Navigator.pop(context);  // Close the dialog
                 },
-                style: Theme.of(context).elevatedButtonTheme.style, // Use the theme's elevated button style
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
                 child: const Text(
                   'Close',
-                  style: TextStyle(
-                    fontSize: 16.0,
-                    color: Colors.black,
-                    fontFamily: 'Georgia',
-                  ),
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
             ],
@@ -74,16 +91,267 @@ class CloseScreenState extends State<CloseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Empty build method since the dialog will automatically be shown on init
-    return const Scaffold(
+    return Scaffold(
+      appBar: customAppBar(context, 'Device Protection'), // Use your custom app bar
       body: Center(
-        child: CircularProgressIndicator(), // Show loading spinner while waiting for dialog
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Device successfully protected!',
+              style: TextStyle(
+                fontSize: 22.0,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Georgia',
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _isLoading
+                  ? null // Disable button when loading
+                  : () async {
+                      await _applyProtection(); // Apply protection when clicked
+                    },
+              style: Theme.of(context).elevatedButtonTheme.style, // Use the theme's elevated button style
+              child: _isLoading
+                  ? const CircularProgressIndicator() // Show spinner when loading
+                  : const Text(
+                      'Close',
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        color: Colors.black,
+                        fontFamily: 'Georgia',
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+/*gana na ning lock device ang problema kay loading lang dli mag gawas ang prompt
+import 'package:flutter/material.dart'; // Flutter imports
+import '../services/protection_service.dart'; // Import the ProtectionService
+import '../design/theme.dart'; // Import your custom theme for consistent styling
+import 'lock_screen.dart';
 
+class CloseScreen extends StatefulWidget {
+  final String childId;
+
+  const CloseScreen({super.key, required this.childId});
+
+  @override
+  CloseScreenState createState() => CloseScreenState();
+}
+
+class CloseScreenState extends State<CloseScreen> {
+  final ProtectionService _protectionService = ProtectionService(); // Initialize ProtectionService
+  bool _isLoading = false; // Manage loading state for the button
+
+  // Trigger protection logic when the close button is pressed
+  Future<void> _applyProtection() async {
+    setState(() {
+      _isLoading = true;  // Start loading
+    });
+
+    try {
+      // Log that protection is being applied
+      debugPrint('Applying protection for childId: ${widget.childId}');
+      
+      // Trigger protection logic (lock/unlock the device)
+      await _protectionService.applyProtection(widget.childId, context);
+    } catch (error) {
+      debugPrint('Error applying protection: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // Stop loading
+        });
+      }
+    }
+  }
+
+  // Dynamic dialog to show different states based on locking/unlocking
+  void _showProtectionDialog(BuildContext context, String title, String buttonText, String childId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,  // Prevent closing by tapping outside the dialog
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 22.0, fontWeight: FontWeight.bold, color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);  // Close the dialog
+                  // Navigate to the LockScreen where the user can enter their PIN
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => LockScreen(childId: childId)),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,  // Customize button color
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
+                child: Text(
+                  buttonText,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: customAppBar(context, 'Device Protection'), // Use your custom app bar
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Device successfully protected!',
+              style: TextStyle(
+                fontSize: 22.0,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Georgia',
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _isLoading
+                  ? null // Disable button when loading
+                  : () async {
+                      await _applyProtection(); // Apply protection when clicked
+                      // Show the dynamic dialog after protection is applied
+                      _showProtectionDialog(
+                        context,
+                        'DEVICE IS LOCKED!',
+                        'Proceed to Unlock',
+                        widget.childId,
+                      );
+                    },
+              style: Theme.of(context).elevatedButtonTheme.style, // Use the theme's elevated button style
+              child: _isLoading
+                  ? const CircularProgressIndicator() // Show spinner when loading
+                  : const Text(
+                      'Close',
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        color: Colors.black,
+                        fontFamily: 'Georgia',
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+*/
+/*try lang ang naa sa taas
+import 'package:flutter/material.dart'; 
+import '../services/protection_service.dart'; // Import the ProtectionService
+import '../design/theme.dart'; // Import your custom theme for consistent styling
+
+class CloseScreen extends StatefulWidget {
+  final String childId;
+
+  const CloseScreen({super.key, required this.childId});
+
+  @override
+  CloseScreenState createState() => CloseScreenState();
+}
+
+class CloseScreenState extends State<CloseScreen> {
+  final ProtectionService _protectionService = ProtectionService(); // Initialize ProtectionService
+  bool _isLoading = false; // Manage loading state for the button
+
+  // Trigger protection logic when the close button is pressed
+  Future<void> _applyProtection() async {
+    setState(() {
+      _isLoading = true;  // Start loading
+    });
+
+    try {
+      // Trigger protection logic (lock/unlock the device)
+      await _protectionService.applyProtection(widget.childId, context);
+    } catch (error) {
+      debugPrint('Error applying protection: $error');
+    } finally {
+      setState(() {
+        _isLoading = false; // Stop loading once protection logic is done
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: customAppBar(context, 'Device Protection'), // Use your custom app bar
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Device successfully protected!',
+              style: TextStyle(
+                fontSize: 22.0,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Georgia',
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _isLoading
+                  ? null // Disable button when loading
+                  : () async {
+                      await _applyProtection(); // Apply protection when clicked
+                      Navigator.pop(context); // Close the screen after locking/unlocking
+                    },
+              style: Theme.of(context).elevatedButtonTheme.style, // Use the theme's elevated button style
+              child: _isLoading
+                  ? const CircularProgressIndicator() // Show spinner when loading
+                  : const Text(
+                      'Close',
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        color: Colors.black,
+                        fontFamily: 'Georgia',
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+*/
 /*wla pa ni child id sa fetchbloakapps
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // For closing the app

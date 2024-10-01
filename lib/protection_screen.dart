@@ -1,3 +1,166 @@
+//filename : protection screen (function is to navigate to pin screen only)
+// filename: protection_screen.dart
+import 'package:flutter/material.dart';
+import '../design/theme.dart'; // Import the custom theme
+import 'pin_screen.dart'; // Import PinScreen
+import 'package:logger/logger.dart'; // Import Logger
+
+final Logger logger = Logger(); // Create a Logger instance
+
+class ProtectionScreen extends StatefulWidget {
+  final String childId; // Declare childId
+
+  const ProtectionScreen({super.key, required this.childId}); // Constructor to initialize childId
+
+  @override
+  ProtectionScreenState createState() => ProtectionScreenState();
+}
+
+class ProtectionScreenState extends State<ProtectionScreen> {
+  bool _isLoading = false; // State to manage loading indicator
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: customAppBar(context, 'Protection Screen'), // Custom AppBar from your theme
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 5,
+                      blurRadius: 7,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Do you want to protect this device?',
+                      style: TextStyle(
+                        fontSize: 22.0,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Georgia',
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 50),
+                    _isLoading
+                        ? const CircularProgressIndicator() // Show loading indicator while waiting for response
+                        : ElevatedButton(
+                            onPressed: () async {
+                              setState(() {
+                                _isLoading = true; // Start loading
+                              });
+
+                              // Navigate to the PIN screen with the childId
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PinScreen(
+                                    childId: widget.childId, // Pass the childId
+                                    onPinEntered: _onPinSaved,
+                                  ),
+                                ),
+                              );
+
+                              logger.i('Navigated to PinScreen with childId: ${widget.childId}');
+
+                              setState(() {
+                                _isLoading = false; // Stop loading
+                              });
+                            },
+                            style: Theme.of(context).elevatedButtonTheme.style,
+                            child: const Text(
+                              'Yes',
+                              style: TextStyle(
+                                fontSize: 16.0,
+                                color: Colors.black,
+                                fontFamily: 'Georgia',
+                              ),
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onPinSaved(String pin) async {
+    // Handle the saved PIN
+    logger.i('PIN saved successfully: $pin'); // Log the saved PIN
+  }
+
+  @override
+  void dispose() {
+    super.dispose(); // Ensure you call the super dispose method
+  }
+
+  // Error dialog in case something goes wrong
+  void showErrorPrompt(BuildContext context, String errorMessage) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Failed to protect device: $errorMessage',
+                style: const TextStyle(
+                  fontSize: 22.0,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Georgia',
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the error dialog
+                },
+                style: Theme.of(context).elevatedButtonTheme.style,
+                child: const Text(
+                  'Close',
+                  style: TextStyle(
+                    fontSize: 16.0,
+                    color: Colors.black,
+                    fontFamily: 'Georgia',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+
+
+
+/* e update lang kay butangan nag app time and pin ang app managemanet
 import 'package:flutter/material.dart';
 import '../services/protection_service.dart';
 import '../services/app_management_service.dart';
@@ -185,7 +348,7 @@ class ProtectionScreenState extends State<ProtectionScreen> {
     );
   }
 }
-
+*/
 /*app mangement to block apps ni aya
 import 'package:flutter/material.dart';
 import '../services/protection_service.dart';

@@ -40,7 +40,7 @@ class PinService {
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/verify-pin'),
+        Uri.parse('$baseUrl/api/verify-pin'),  // Correct API endpoint for verifying the PIN
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'childId': childId, 'pin': pin}),
       );
@@ -62,6 +62,70 @@ class PinService {
   }
 }
 
+/*
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../services/config.dart';  // Import Config for baseUrl
+import 'package:logger/logger.dart';  // Import logger for logging
+
+class PinService {
+  final String baseUrl = Config.baseUrl;
+  final Logger logger = Logger();
+
+  // Function to set (or save) the PIN
+  Future<void> savePin(String childId, String pin) async {
+    logger.i('Saving PIN for childId: $childId');
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/set-pin'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'childId': childId, 'pin': pin}),
+      );
+
+      logger.i('Response Status Code: ${response.statusCode}');
+      logger.i('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        logger.i('PIN saved successfully');
+      } else {
+        logger.e('Failed to save PIN: ${response.body}');
+        throw Exception('Failed to save PIN');
+      }
+    } catch (error) {
+      logger.e('Error occurred while saving PIN: $error');
+      throw Exception('Error occurred while saving PIN');
+    }
+  }
+
+  // Function to verify the PIN
+  Future<bool> verifyPin(String childId, String pin) async {
+    logger.i('Verifying PIN for childId: $childId');
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/verify-pin'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'childId': childId, 'pin': pin}),
+      );
+
+      logger.i('Response Status Code: ${response.statusCode}');
+      logger.i('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        logger.i('PIN verified successfully');
+        return true;
+      } else {
+        logger.w('PIN verification failed: ${response.body}');
+        return false;
+      }
+    } catch (error) {
+      logger.e('Error occurred while verifying PIN: $error');
+      throw Exception('Error occurred while verifying PIN');
+    }
+  }
+}
+*/
 
 /*
 import 'dart:convert';

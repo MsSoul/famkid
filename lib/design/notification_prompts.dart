@@ -39,7 +39,7 @@ void showSuccessPrompt(BuildContext context) {
   );
 }
 
-void showConnectionSuccessPrompt(BuildContext context) {
+void showConnectionSuccessPrompt(BuildContext context, String childId) {
   // First show the green loading spinner
   showDialog(
     context: context,
@@ -57,7 +57,9 @@ void showConnectionSuccessPrompt(BuildContext context) {
   // Simulate a short delay (e.g., for any network operation)
   Future.delayed(const Duration(seconds: 2), () {
     // Close the loading spinner dialog after 2 seconds
-    Navigator.of(context).pop();
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
 
     // Show the success image and Next button after the spinner disappears
     showDialog(
@@ -95,9 +97,11 @@ void showConnectionSuccessPrompt(BuildContext context) {
               // Proceed to ProtectionScreen
               ElevatedButton(
                 onPressed: () {
-                  // Directly navigate to the ProtectionScreen without the second spinner
+                  // Directly navigate to the ProtectionScreen with childId
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const ProtectionScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => ProtectionScreen(childId: childId),
+                    ),
                     (Route<dynamic> route) => false,
                   );
                 },
@@ -125,8 +129,6 @@ void showConnectionSuccessPrompt(BuildContext context) {
   });
 }
 
-
-
 // Error Notification Prompt
 void showErrorPrompt(BuildContext context, String message) {
   showDialog(
@@ -151,7 +153,6 @@ void showErrorPrompt(BuildContext context, String message) {
     },
   );
 }
-
 
 /*
 import 'package:flutter/material.dart';
