@@ -1,9 +1,10 @@
+//filename:lock screen// filename: lock_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:logger/logger.dart';  // Import the logger package
-import '../services/pin_service.dart';  // Pin service for verifying the pin
-import '../services/device_control.dart';  // Device control for unlocking the device
-import '../design/theme.dart';  // Assuming custom app bar and other designs
+import 'package:logger/logger.dart';
+import '../services/pin_service.dart';
+import '../services/device_control.dart';
+import '../design/theme.dart';
 
 final Logger logger = Logger();  // Initialize Logger
 final PinService pinService = PinService();  // Initialize PinService
@@ -29,7 +30,6 @@ class LockScreenState extends State<LockScreen> {
   final FocusNode pin4FocusNode = FocusNode();
 
   bool _isLoading = false;
-  List<String> enteredPin = ["", "", "", ""];  // List to store the entered pin digits
 
   @override
   void dispose() {
@@ -45,12 +45,13 @@ class LockScreenState extends State<LockScreen> {
   }
 
   Future<void> _verifyPin() async {
-    String fullPin = enteredPin.join();
+    String fullPin = pin1Controller.text + pin2Controller.text + pin3Controller.text + pin4Controller.text;
     logger.i('Entered PIN: $fullPin');
 
+    // Ensure PIN is 4 digits long
     if (fullPin.length == 4 && RegExp(r'^\d{4}$').hasMatch(fullPin)) {
       setState(() {
-        _isLoading = true;  // Show loading spinner
+        _isLoading = true;
       });
 
       try {
@@ -59,8 +60,8 @@ class LockScreenState extends State<LockScreen> {
         if (isValid) {
           logger.i('PIN verified successfully');
 
-          // Unlock the device by passing the entered PIN and childId to the native Android code
-          await DeviceControl.unlockWithPin(fullPin);  // Pass both fullPin and childId
+          // Unlock the device by passing the entered PIN
+          await DeviceControl.unlockWithPin(fullPin);
 
           // Close the lock screen
           if (mounted) {
@@ -76,7 +77,7 @@ class LockScreenState extends State<LockScreen> {
       } finally {
         if (mounted) {
           setState(() {
-            _isLoading = false;  // Make sure this gets reset to show the button again
+            _isLoading = false;
           });
         }
       }
@@ -118,7 +119,7 @@ class LockScreenState extends State<LockScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: customAppBar(context, 'Enter PIN'),  // Use your custom app bar
+      appBar: customAppBar(context, 'Enter PIN'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Center(
@@ -136,10 +137,10 @@ class LockScreenState extends State<LockScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildPinBox(pin1Controller, pin1FocusNode, pin2FocusNode, 0),
-                  _buildPinBox(pin2Controller, pin2FocusNode, pin3FocusNode, 1),
-                  _buildPinBox(pin3Controller, pin3FocusNode, pin4FocusNode, 2),
-                  _buildPinBox(pin4Controller, pin4FocusNode, null, 3),
+                  _buildPinBox(pin1Controller, pin1FocusNode, pin2FocusNode),
+                  _buildPinBox(pin2Controller, pin2FocusNode, pin3FocusNode),
+                  _buildPinBox(pin3Controller, pin3FocusNode, pin4FocusNode),
+                  _buildPinBox(pin4Controller, pin4FocusNode, null),
                 ],
               ),
               const SizedBox(height: 20),
@@ -160,7 +161,7 @@ class LockScreenState extends State<LockScreen> {
     );
   }
 
-  Widget _buildPinBox(TextEditingController controller, FocusNode currentNode, FocusNode? nextNode, int index) {
+  Widget _buildPinBox(TextEditingController controller, FocusNode currentNode, FocusNode? nextNode) {
     return SizedBox(
       width: 60,
       child: TextField(
@@ -175,12 +176,11 @@ class LockScreenState extends State<LockScreen> {
         ),
         onChanged: (value) {
           if (value.isNotEmpty && RegExp(r'^\d$').hasMatch(value)) {
-            enteredPin[index] = value;  // Store the digit in the correct index
-
             if (nextNode != null) {
               FocusScope.of(context).requestFocus(nextNode);
             } else {
               currentNode.unfocus();  // Unfocus if last digit
+              _verifyPin();  // Automatically verify when the last digit is entered
             }
 
             Timer(const Duration(milliseconds: 500), () {
@@ -200,7 +200,6 @@ class LockScreenState extends State<LockScreen> {
     );
   }
 }
-
 
 /*import 'dart:async';
 import 'package:flutter/material.dart';
