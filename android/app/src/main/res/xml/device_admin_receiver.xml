@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Policies that this admin can enforce -->
+    <uses-policies>
+        <!-- Enforce the ability to lock the device -->
+        <force-lock />
+    </uses-policies>
+</device-admin>

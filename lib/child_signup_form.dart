@@ -114,42 +114,47 @@ class _ChildSignupFormState extends State<ChildSignupForm> {
   }
 
   void _onSignupPressed() async {
-    _validateEmail();
-    _validateUsername();
-    _validatePassword();
-    _validateConfirmPassword();
-    _validateDate();
+  _validateEmail();
+  _validateUsername();
+  _validatePassword();
+  _validateConfirmPassword();
+  _validateDate();
 
-    if (_emailError.isEmpty && _usernameError.isEmpty && _passwordError.isEmpty && _confirmPasswordError.isEmpty && _dateError.isEmpty) {
-      try {
-        _logger.d('Attempting sign up with: ${emailController.text}, ${usernameController.text}');
-        bool success = await _apiService.signUpChild(
-          emailController.text,
-          usernameController.text,
-          passwordController.text,
-          _selectedDate!.day,
-          _selectedDate!.month,
-          _selectedDate!.year,
-        );
-        _logger.d('Sign up success: $success');
-        if (!mounted) return;
-        if (success) {
-          _logger.d('Signup successful');
-          showSuccessPrompt(context); // Show success prompt
-        } else {
-          _logger.e('Signup failed');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Signup failed')),
-          );
-        }
-      } catch (e) {
-        _logger.e('Signup failed: $e');
+  if (_emailError.isEmpty &&
+      _usernameError.isEmpty &&
+      _passwordError.isEmpty &&
+      _confirmPasswordError.isEmpty &&
+      _dateError.isEmpty) {
+    try {
+      _logger.d('Attempting sign up at ${DateTime.now()}: ${emailController.text}, ${usernameController.text}');
+      bool success = await _apiService.signUpChild(
+        emailController.text,
+        usernameController.text,
+        passwordController.text,
+        _selectedDate!.day,
+        _selectedDate!.month,
+        _selectedDate!.year,
+      );
+      _logger.d('Sign up success: $success');
+      if (!mounted) return;
+      if (success) {
+        _logger.d('Signup successful');
+        showSuccessPrompt(context); // Show success prompt
+      } else {
+        _logger.e('Signup failed');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Signup failed: $e')),
+          const SnackBar(content: Text('Signup failed')),
         );
       }
+    } catch (e) {
+      _logger.e('Signup failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Signup failed: $e')),
+      );
     }
   }
+}
+
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(

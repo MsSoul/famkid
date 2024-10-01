@@ -47,38 +47,41 @@ class PinScreenState extends State<PinScreen> {
   }
 
   Future<void> _submitPin() async {
-    String fullPin = realPin.join();
-    logger.i('Entered PIN: $fullPin');
+  String fullPin = realPin.join();
+  logger.i('Entered PIN: $fullPin');
 
-    if (fullPin.length == 4 && RegExp(r'^\d{4}$').hasMatch(fullPin)) {
-      setState(() {
-        _isLoading = true;  // Show loading spinner
-      });
+  if (fullPin.length == 4 && RegExp(r'^\d{4}$').hasMatch(fullPin)) {
+    setState(() {
+      _isLoading = true;  // Show loading spinner
+    });
 
-      try {
-        logger.i('Attempting to save the PIN');
-        await pinService.savePin(widget.childId, fullPin);  // Save the PIN using the service
-        logger.i('PIN saved successfully');
+    try {
+      logger.i('Attempting to save the PIN');
+      await pinService.savePin(widget.childId, fullPin);  // Save the PIN using the service
+      logger.i('PIN saved successfully');
 
-        // Navigate to CloseScreen after successful PIN save
+      // Navigate to CloseScreen after successful PIN save
+      if (mounted) {  // Check if the widget is still mounted before navigating
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => CloseScreen(childId: widget.childId),
           ),
         );
-      } catch (error) {
-        logger.e('Error while saving PIN: $error');
-        _showErrorDialog('Failed to save PIN. Please try again.');
-      } finally {
-        setState(() {
-          _isLoading = false;  // Make sure this gets reset to show the button again
-        });
       }
-    } else {
-      _showErrorDialog('Please enter a valid 4-digit PIN.');
+    } catch (error) {
+      logger.e('Error while saving PIN: $error');
+      _showErrorDialog('Failed to save PIN. Please try again.');
+    } finally {
+      setState(() {
+        _isLoading = false;  // Make sure this gets reset to show the button again
+      });
     }
+  } else {
+    _showErrorDialog('Please enter a valid 4-digit PIN.');
   }
+}
+
 
   void _showErrorDialog(String message) {
     showDialog(

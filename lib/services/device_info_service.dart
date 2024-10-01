@@ -1,5 +1,4 @@
-// filename: services/device_info_service.dart(saving device info to database .)
-// filename: services/device_info_service.dart
+// filename: services/device_info_service.dart(saving device info to database .)1
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
