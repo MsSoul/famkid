@@ -1,5 +1,4 @@
 // filename: services/remaining_time_service.dart
-import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import '../algorithm/tokenbucket.dart';
 
@@ -92,7 +91,7 @@ class RemainingTimeService {
             where.eq('slot_identifier', ObjectId.fromHexString(slotIdentifier)),
             modify
                 .set('remaining_time', allowedTime)
-                .set('timestamp', DateTime.now()), // Use the current time as the timestamp
+                .set('timestamp', DateTime.now()), 
             upsert: true,
           );
         }

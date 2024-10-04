@@ -8,13 +8,35 @@ import 'package:flutter_spinkit/flutter_spinkit.dart'; // For loading spinner
 final Logger logger = Logger(); // Create a Logger instance
 
 void showSuccessPrompt(BuildContext context) {
+  final theme = Theme.of(context); // Fetch theme
+  final appBarColor = theme.appBarTheme.backgroundColor ?? Colors.green; // AppBar color
+  final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black; // Theme text color
+  final fontFamily = theme.textTheme.bodyLarge?.fontFamily ?? 'Georgia'; // Theme font style
+
   showDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        backgroundColor: Colors.white, // White background
-        title: const Text('Congratulations!'),
-        content: const Text('Welcome to Famie, you successfully created an account. Proceed to login.'),
+        backgroundColor: theme.scaffoldBackgroundColor, // Background color from theme
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: appBarColor, width: 2.0), // Border color same as AppBar
+          borderRadius: BorderRadius.circular(15.0), // Rounded corners for the dialog
+        ),
+        title: Text(
+          'Congratulations!',
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.bold, // Make it bold
+            fontFamily: fontFamily,
+          ),
+        ),
+        content: Text(
+          'Welcome to Famie, you successfully created an account. Proceed to login.',
+          style: TextStyle(
+            color: textColor, // Use theme's text color
+            fontFamily: fontFamily, // Use theme's font style
+          ),
+        ),
         actionsAlignment: MainAxisAlignment.center, // Center the button
         actions: <Widget>[
           ElevatedButton(
@@ -24,14 +46,15 @@ void showSuccessPrompt(BuildContext context) {
                 (Route<dynamic> route) => false,
               );
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green[200], // Button color
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30.0),
+            style: theme.elevatedButtonTheme.style, // Use elevated button style from theme
+            child: Text(
+              'Log In',
+              style: TextStyle(
+                color: theme.elevatedButtonTheme.style?.foregroundColor?.resolve({}) ?? Colors.black, // Use button text color from theme
+                fontWeight: FontWeight.bold, // Bold text
+                fontFamily: fontFamily, // Use theme's font style
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
             ),
-            child: const Text('Log In', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontFamily: 'Georgia')),
           ),
         ],
       );
@@ -40,14 +63,19 @@ void showSuccessPrompt(BuildContext context) {
 }
 
 void showConnectionSuccessPrompt(BuildContext context, String childId) {
-  // First show the green loading spinner
+  final theme = Theme.of(context); // Fetch theme data
+  final appBarColor = theme.appBarTheme.backgroundColor ?? Colors.green; // Use AppBar color
+  final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black; // Theme text color
+  final fontFamily = theme.textTheme.bodyLarge?.fontFamily ?? 'Georgia'; // Theme font style
+
+  // First show the loading spinner
   showDialog(
     context: context,
     barrierDismissible: false, // Prevent dismissing the loading dialog
     builder: (context) {
-      return const Center(
+      return Center(
         child: SpinKitFadingCircle(
-          color: Color(0xFF388E3C), // Green color for the loading spinner
+          color: appBarColor, // Spinner color following the AppBar color
           size: 50.0,
         ),
       );
@@ -61,35 +89,33 @@ void showConnectionSuccessPrompt(BuildContext context, String childId) {
       Navigator.of(context).pop();
     }
 
-    // Show the success image and Next button after the spinner disappears
+    // Show the success icon and Next button after the spinner disappears
     showDialog(
       context: context,
       builder: (context) {
-        logger.i('Displaying success.png after spinner');
+        logger.i('Displaying success check icon after spinner');
         return AlertDialog(
-          backgroundColor: Colors.white,
+          backgroundColor: theme.scaffoldBackgroundColor, // Use the scaffold background color
           shape: RoundedRectangleBorder(
+            side: BorderSide(color: appBarColor, width: 2.0), // Add a border with the same color as the AppBar
             borderRadius: BorderRadius.circular(20.0),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset(
-                'assets/success.png',
-                width: 200,
-                height: 200,
-                errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
-                  return const Text('Failed to load image');
-                },
+              Icon(
+                Icons.check_circle, // Use the check_circle icon for success
+                size: 100,
+                color: appBarColor, // Use the AppBar color for the success icon
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Successfully Connected!',
                 style: TextStyle(
                   fontSize: 22.0,
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Georgia',
-                  color: Colors.black,
+                  fontFamily: fontFamily, // Use theme's font style
+                  color: textColor, // Use theme's text color
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -105,19 +131,13 @@ void showConnectionSuccessPrompt(BuildContext context, String childId) {
                     (Route<dynamic> route) => false,
                   );
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green[200],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 15.0),
-                ),
-                child: const Text(
+                style: theme.elevatedButtonTheme.style, // Use the elevated button style from the theme
+                child: Text(
                   'Next',
                   style: TextStyle(
                     fontSize: 16.0,
-                    color: Colors.white,
-                    fontFamily: 'Georgia',
+                    color: theme.textTheme.bodyLarge?.color, // Use the theme's text color
+                    fontFamily: fontFamily, // Use theme's font style
                   ),
                 ),
               ),
@@ -129,6 +149,90 @@ void showConnectionSuccessPrompt(BuildContext context, String childId) {
   });
 }
 
+void showNoButtonPrompt(BuildContext context) {
+  final theme = Theme.of(context); // Fetch theme
+  final appBarColor = theme.appBarTheme.backgroundColor ?? Colors.green; // AppBar color
+  final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black; // Theme text color
+  final fontFamily = theme.textTheme.bodyLarge?.fontFamily ?? 'Georgia'; // Theme font style
+  final buttonColor = theme.elevatedButtonTheme.style?.backgroundColor?.resolve({}) ?? Colors.green; // Get elevated button color
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        backgroundColor: theme.scaffoldBackgroundColor, // Background color from theme
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: appBarColor, width: 2.0), // Border color same as AppBar
+          borderRadius: BorderRadius.circular(15.0), // Rounded corners for the dialog
+        ),
+        title: Text(
+          'Are you sure?',
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.bold, // Make it bold
+            fontFamily: fontFamily,
+          ),
+        ),
+        content: Text(
+          'By continuing, your child\'s device will not be supervised, and you will be logged out. This means no restrictions or monitoring will be in place for your child.',
+          style: TextStyle(
+            color: textColor, // Use theme's text color
+            fontFamily: fontFamily, // Use theme's font style
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.center, // Center the buttons
+        actions: <Widget>[
+          // Continue Button (Switched to be the outlined button now)
+          OutlinedButton(
+            onPressed: () {
+              // Log the user out and navigate to the login screen
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                (Route<dynamic> route) => false,
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: buttonColor, width: 2.0), // Use elevated button color for border
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0), // Padding
+            ),
+            child: Text(
+              'Continue',
+              style: TextStyle(
+                fontSize: 16.0,
+                color: buttonColor, // Use elevated button color for text
+                fontFamily: fontFamily, // Use theme's font style
+              ),
+            ),
+          ),
+          const SizedBox(width: 10), // Add spacing between buttons
+
+          // Go Back Button (Switched to be the elevated button now)
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Close the prompt without logging out
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: buttonColor, // Use elevated button color for background
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0), // Padding
+            ),
+            child: Text(
+              'Go Back',
+              style: TextStyle(
+                fontSize: 16.0,
+                color: textColor, // Text color follows theme's text color
+                fontFamily: fontFamily, // Use theme's font style
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+/*----updated na ang taas----*/
 // Error Notification Prompt
 void showErrorPrompt(BuildContext context, String message) {
   showDialog(

@@ -6,7 +6,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.util.Log
@@ -21,6 +20,7 @@ class MainActivity : FlutterActivity() {
     private val DEVICE_INFO_CHANNEL = "com.example.device_info"
     private val DEVICE_CONTROL_CHANNEL = "com.example.device/control" // Channel for device lock/unlock control
     private val DEVICE_UNLOCK_PIN = "com.example.device/unlock_pin"   // Channel for device unlock via PIN
+    private val PIN_LOCK_CHANNEL = "com.example.app/block"            // Channel for applying PIN lock on system apps
 
     private lateinit var appInstallReceiver: BroadcastReceiver
     private lateinit var devicePolicyManager: DevicePolicyManager
@@ -36,7 +36,7 @@ class MainActivity : FlutterActivity() {
         // Safely handle flutterEngine
         val messenger = flutterEngine?.dartExecutor?.binaryMessenger ?: run {
             Log.e("MainActivity", "flutterEngine or BinaryMessenger is null.")
-            return // Exit if there's no valid messenger
+            return
         }
 
         // MethodChannel for locking and unlocking the device
@@ -56,7 +56,7 @@ class MainActivity : FlutterActivity() {
                 }
                 "unlockDevice" -> {
                     if (devicePolicyManager.isAdminActive(componentName)) {
-                        unlockDevice(result)  // Pass result to unlockDevice
+                        unlockDevice(result)
                     } else {
                         result.error("ADMIN_DISABLED", "Device Admin is not enabled", null)
                     }
@@ -76,7 +76,13 @@ class MainActivity : FlutterActivity() {
             val enteredPin = call.argument<String>("enteredPin")
             val childId = call.argument<String>("childId") ?: ""
 
-            // Fetch the correct PIN from the backend (use OkHttp)
+            // Check if entered PIN is valid
+            if (enteredPin.isNullOrEmpty()) {
+                result.error("INVALID_PIN", "Entered PIN is null or empty", null)
+                return@setMethodCallHandler
+            }
+
+            // Fetch the correct PIN from the backend using OkHttp
             val correctPin = getPinFromBackend(childId)
 
             // Unlock the device if the PIN is correct
@@ -87,12 +93,25 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // MethodChannel for fetching installed apps (if needed)
+        // MethodChannel for applying PIN lock to system apps
+        MethodChannel(messenger, PIN_LOCK_CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method == "pinLockApp") {
+                val packageName = call.argument<String>("package_name")
+                if (packageName != null) {
+                    applyPinLockForSystemApp(packageName)
+                    result.success("PIN lock applied for app: $packageName")
+                } else {
+                    result.error("INVALID_PACKAGE", "Package name is null", null)
+                }
+            } else {
+                result.notImplemented()
+            }
+        }
+
+        // MethodChannel for fetching installed apps
         MethodChannel(messenger, APP_LIST_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "getInstalledApps") {
                 val packageManager = packageManager
-
-                // Intent to filter apps that have a launcher and can be launched from the home screen
                 val intent = Intent(Intent.ACTION_MAIN, null)
                 intent.addCategory(Intent.CATEGORY_LAUNCHER)
 
@@ -157,11 +176,18 @@ class MainActivity : FlutterActivity() {
     // Logic for unlocking the device based on admin privileges
     private fun unlockDevice(result: MethodChannel.Result) {
         if (devicePolicyManager.isAdminActive(componentName)) {
-            // Unlock logic. You could clear the keyguard or perform some action to simulate unlock.
+            // Unlock logic: Here you can simulate or clear the keyguard lock.
             result.success("Device unlocked successfully")
         } else {
             result.error("ADMIN_DISABLED", "Device Admin is not enabled", null)
         }
+    }
+
+    // Function to apply PIN lock for system apps
+    private fun applyPinLockForSystemApp(packageName: String) {
+        Log.i("MainActivity", "Applying PIN lock for system app: $packageName")
+        // Implement the logic to PIN protect the system app here
+        // For example, lock the app with a custom PIN or restrict access
     }
 
     // Function to get the MAC address of the device
@@ -172,19 +198,18 @@ class MainActivity : FlutterActivity() {
 
     // Function to fetch the correct PIN from the backend
     private fun getPinFromBackend(childId: String): String {
-        // Use OkHttp to fetch the correct PIN from your backend API
         val client = OkHttpClient()
         val request = Request.Builder()
-            .url("https://192.168.1.7/api/child/$childId/pin")
+            .url("http://192.168.100.235:5504/api/child/$childId/pin") // Replace with actual backend URL
             .build()
 
         client.newCall(request).execute().use { response ->
             val body = response.body?.string()
-            if (response.isSuccessful && body != null) {
+            return if (response.isSuccessful && body != null) {
                 val json = JSONObject(body)
-                return json.getString("pin")
+                json.getString("pin")
             } else {
-                return "1234" // Default fallback pin in case of error
+                "1234" // Default fallback PIN in case of error
             }
         }
     }

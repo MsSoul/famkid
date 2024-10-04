@@ -1,5 +1,158 @@
 // filename: close.dart
+// filename: close.dart
 import 'package:flutter/material.dart';
+import '../services/protection_service.dart'; // Import the ProtectionService
+import '../design/theme.dart'; // Import your custom theme for consistent styling
+
+class CloseScreen extends StatefulWidget {
+  final String childId;
+
+  const CloseScreen({super.key, required this.childId});
+
+  @override
+  CloseScreenState createState() => CloseScreenState();
+}
+
+class CloseScreenState extends State<CloseScreen> {
+  final ProtectionService _protectionService = ProtectionService(); // Initialize ProtectionService
+  bool _isLoading = false; // Manage loading state for the button
+
+  // Trigger protection logic when the close button is pressed
+  Future<void> _applyProtection() async {
+    setState(() {
+      _isLoading = true;  // Start loading
+    });
+
+    try {
+      // Log that protection is being applied
+      debugPrint('Applying protection for childId: ${widget.childId}');
+      
+      // Trigger protection logic (lock/unlock the device)
+      await _protectionService.applyProtection(widget.childId, context);
+      
+    } catch (error) {
+      debugPrint('Error applying protection: $error');
+      _showErrorDialog(context, error.toString());
+    } finally {
+      // Ensure loading is stopped in both success and failure cases
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // Stop loading
+        });
+      }
+    }
+  }
+
+  // Show an error dialog if protection fails
+  void _showErrorDialog(BuildContext context, String errorMessage) {
+    final theme = Theme.of(context); // Fetch theme data
+    final appBarColor = theme.appBarTheme.backgroundColor ?? Colors.red; // Use AppBar color
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black; // Theme text color
+    final fontFamily = theme.textTheme.bodyLarge?.fontFamily ?? 'Georgia'; // Theme font style
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,  // Allow closing the dialog by tapping outside
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: theme.scaffoldBackgroundColor, // Use theme background color
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Error occurred!',
+                style: TextStyle(
+                  fontSize: 22.0,
+                  fontWeight: FontWeight.bold,
+                  color: appBarColor, // Use AppBar color for the title
+                  fontFamily: fontFamily, // Use theme's font style
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                errorMessage,
+                style: TextStyle(
+                  fontSize: 16.0,
+                  color: textColor, // Use theme's text color
+                  fontFamily: fontFamily, // Use theme's font style
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);  // Close the dialog
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: appBarColor, // Use AppBar color
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Fetch theme data
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black; // Theme text color
+    final fontFamily = theme.textTheme.bodyLarge?.fontFamily ?? 'Georgia'; // Theme font style
+
+    return Scaffold(
+      appBar: customAppBar(context, 'Device Protection'), // Use your custom app bar
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Device successfully protected!',
+              style: TextStyle(
+                fontSize: 22.0,
+                fontWeight: FontWeight.bold,
+                fontFamily: fontFamily, // Use theme's font style
+                color: textColor, // Use theme's text color
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _isLoading
+                  ? null // Disable button when loading
+                  : () async {
+                      await _applyProtection(); // Apply protection when clicked
+                    },
+              style: theme.elevatedButtonTheme.style, // Use the theme's elevated button style
+              child: _isLoading
+                  ? const CircularProgressIndicator() // Show spinner when loading
+                  : Text(
+                      'Close',
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        color: textColor, // Use theme's text color
+                        fontFamily: fontFamily, // Use theme's font style
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/*import 'package:flutter/material.dart';
 import '../services/protection_service.dart'; // Import the ProtectionService
 import '../design/theme.dart'; // Import your custom theme for consistent styling
 
@@ -130,7 +283,7 @@ class CloseScreenState extends State<CloseScreen> {
       ),
     );
   }
-}
+}*/
 
 /*gana na ning lock device ang problema kay loading lang dli mag gawas ang prompt
 import 'package:flutter/material.dart'; // Flutter imports

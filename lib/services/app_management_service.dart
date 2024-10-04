@@ -10,6 +10,360 @@ final Logger logger = Logger();
 class AppManagementService {
   static const platform = MethodChannel('com.example.app/block');
 
+  // Fetch the apps from the app_management and remaining_app_time collections
+  Future<Map<String, dynamic>> fetchApps(String childId) async {
+    final url = Uri.parse('${Config.baseUrl}/api/fetch-apps?childId=$childId');
+
+    logger.i('Requesting apps from: $url');
+
+    try {
+      final response = await http.get(url);
+      logger.i('HTTP Status Code: ${response.statusCode}');
+      logger.i('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        logger.i('Decoded Data: $data');
+
+        if (data == null) {
+          logger.e('Error: Decoded response is null');
+          return {};
+        }
+
+        // Fetch user apps and system apps separately
+        List<String> blockedUserApps = (data['user_apps'] as List?)
+            ?.where((app) => app['is_allowed'] == false || app['remaining_time'] <= 0)
+            .map((app) => app['package_name'].toString())
+            .toList() ?? [];
+
+        List<String> allowedUserApps = (data['user_apps'] as List?)
+            ?.where((app) => app['is_allowed'] == true && app['remaining_time'] > 0)
+            .map((app) => app['package_name'].toString())
+            .toList() ?? [];
+
+        // Fetch system apps that should be PIN locked
+        List<String> pinLockedSystemApps = (data['system_apps'] as List?)
+            ?.where((app) => app['is_pin_locked'] == true)
+            .map((app) => app['package_name'].toString())
+            .toList() ?? [];
+
+        logger.i('Blocked User Apps: $blockedUserApps');
+        logger.i('Allowed User Apps: $allowedUserApps');
+        logger.i('PIN Locked System Apps: $pinLockedSystemApps');
+
+        return {
+          'blocked_user_apps': blockedUserApps,
+          'allowed_user_apps': allowedUserApps,
+          'pin_locked_system_apps': pinLockedSystemApps,
+        };
+      } else {
+        logger.e('Failed to fetch apps: ${response.statusCode} - ${response.reasonPhrase}');
+        return {};
+      }
+    } catch (error) {
+      logger.e('Error fetching apps: $error');
+      return {};
+    }
+  }
+
+  // Block/unblock a user app on the device using MethodChannel
+  Future<void> updateAppOnDevice(Map<String, dynamic> app) async {
+    logger.i("App data received: $app");
+
+    String? packageName = app['package_name'];
+    bool? isAllowed = app['is_allowed'];
+
+    logger.i("Package name: $packageName, isAllowed: $isAllowed");
+
+    if (packageName == null || isAllowed == null) {
+      logger.e("Error: Package name or isAllowed status is null for app: $app");
+      throw PlatformException(
+        code: 'INVALID_PACKAGE',
+        message: 'Package name or isAllowed status is null',
+      );
+    }
+
+    try {
+      logger.i("Invoking native method with package_name: $packageName and is_allowed: $isAllowed");
+
+      final result = await platform.invokeMethod('blockApp', {
+        'package_name': packageName,
+        'is_allowed': isAllowed,
+      });
+
+      logger.i("App processed successfully: $packageName, allowed: $isAllowed, result: $result");
+    } catch (e) {
+      logger.e("Failed to process app: $packageName, Error: $e");
+      rethrow;
+    }
+  }
+
+  // Apply blocking/unblocking user apps fetched from backend
+  Future<void> applyUserAppSettings(Map<String, dynamic> apps) async {
+    List<String> blockedApps = apps['blocked_user_apps'] ?? [];
+    List<String> allowedApps = apps['allowed_user_apps'] ?? [];
+
+    if (blockedApps.isEmpty && allowedApps.isEmpty) {
+      logger.i('No user apps to block or unblock.');
+      return;
+    }
+
+    // Block user apps
+    for (String packageName in blockedApps) {
+      logger.i("Attempting to block user app: $packageName");
+      try {
+        await updateAppOnDevice({'package_name': packageName, 'is_allowed': false});
+      } catch (e) {
+        logger.e('Failed to block user app: $packageName, Error: $e');
+      }
+    }
+
+    // Unblock user apps
+    for (String packageName in allowedApps) {
+      logger.i("Attempting to unblock user app: $packageName");
+      try {
+        await updateAppOnDevice({'package_name': packageName, 'is_allowed': true});
+      } catch (e) {
+        logger.e('Failed to unblock user app: $packageName, Error: $e');
+      }
+    }
+
+    logger.i('All user apps processed for blocking and unblocking.');
+  }
+
+  // Apply PIN locking for system apps
+  Future<void> applyPinLockForSystemApps(List<String> pinLockedApps) async {
+    if (pinLockedApps.isEmpty) {
+      logger.i('No system apps to lock with PIN.');
+      return;
+    }
+
+    for (String packageName in pinLockedApps) {
+      logger.i("Applying PIN lock for system app: $packageName");
+      try {
+        final result = await platform.invokeMethod('pinLockApp', {
+          'package_name': packageName,
+          'is_pin_locked': true,
+        });
+
+        logger.i("PIN lock applied successfully for app: $packageName, result: $result");
+      } catch (e) {
+        logger.e("Failed to apply PIN lock for system app: $packageName, Error: $e");
+      }
+    }
+  }
+
+  // Fetch and apply app settings (blocking for user apps and PIN locking for system apps)
+  Future<void> fetchAndApplyAppSettings(String childId) async {
+    logger.i('Fetching apps for childId: $childId');
+
+    // Fetch apps from the backend
+    Map<String, dynamic> apps = await fetchApps(childId);
+
+    if (apps.isEmpty) {
+      logger.i('No apps to block, unblock, or PIN lock.');
+      return;
+    }
+
+    // Apply blocking/unblocking of user apps
+    await applyUserAppSettings(apps);
+
+    // Apply PIN locking of system apps
+    await applyPinLockForSystemApps(apps['pin_locked_system_apps'] ?? []);
+
+    logger.i('App settings (user apps and system apps) applied successfully.');
+  }
+}
+
+/*e modify hay ang system apps always naa nay pin
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'config.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
+
+class AppManagementService {
+  static const platform = MethodChannel('com.example.app/block');
+
+  // Fetch the apps from the app_management and remaining_app_time collections
+  Future<Map<String, dynamic>> fetchApps(String childId) async {
+    final url = Uri.parse('${Config.baseUrl}/api/fetch-apps?childId=$childId');
+
+    logger.i('Requesting apps from: $url');
+
+    try {
+      final response = await http.get(url);
+      logger.i('HTTP Status Code: ${response.statusCode}');
+      logger.i('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        logger.i('Decoded Data: $data');
+
+        if (data == null) {
+          logger.e('Error: Decoded response is null');
+          return {};
+        }
+
+        // Fetch user apps and system apps separately
+        List<String> blockedUserApps = (data['user_apps'] as List?)
+            ?.where((app) => app['is_allowed'] == false || app['remaining_time'] <= 0)
+            .map((app) => app['package_name'].toString())
+            .toList() ?? [];
+
+        List<String> allowedUserApps = (data['user_apps'] as List?)
+            ?.where((app) => app['is_allowed'] == true && app['remaining_time'] > 0)
+            .map((app) => app['package_name'].toString())
+            .toList() ?? [];
+
+        // Fetch system apps that should be PIN locked
+        List<String> pinLockedSystemApps = (data['system_apps'] as List?)
+            ?.where((app) => app['is_pin_locked'] == true)
+            .map((app) => app['package_name'].toString())
+            .toList() ?? [];
+
+        logger.i('Blocked User Apps: $blockedUserApps');
+        logger.i('Allowed User Apps: $allowedUserApps');
+        logger.i('PIN Locked System Apps: $pinLockedSystemApps');
+
+        return {
+          'blocked_user_apps': blockedUserApps,
+          'allowed_user_apps': allowedUserApps,
+          'pin_locked_system_apps': pinLockedSystemApps,
+        };
+      } else {
+        logger.e('Failed to fetch apps: ${response.statusCode} - ${response.reasonPhrase}');
+        return {};
+      }
+    } catch (error) {
+      logger.e('Error fetching apps: $error');
+      return {};
+    }
+  }
+
+  // Block/unblock a user app on the device using MethodChannel
+  Future<void> updateAppOnDevice(Map<String, dynamic> app) async {
+    logger.i("App data received: $app");
+
+    String? packageName = app['package_name'];
+    bool? isAllowed = app['is_allowed'];
+
+    logger.i("Package name: $packageName, isAllowed: $isAllowed");
+
+    if (packageName == null || isAllowed == null) {
+      logger.e("Error: Package name or isAllowed status is null for app: $app");
+      throw PlatformException(
+        code: 'INVALID_PACKAGE',
+        message: 'Package name or isAllowed status is null',
+      );
+    }
+
+    try {
+      logger.i("Invoking native method with package_name: $packageName and is_allowed: $isAllowed");
+
+      final result = await platform.invokeMethod('blockApp', {
+        'package_name': packageName,
+        'is_allowed': isAllowed,
+      });
+
+      logger.i("App processed successfully: $packageName, allowed: $isAllowed, result: $result");
+    } catch (e) {
+      logger.e("Failed to process app: $packageName, Error: $e");
+      rethrow;
+    }
+  }
+
+  // Apply blocking/unblocking user apps fetched from backend
+  Future<void> applyUserAppSettings(Map<String, dynamic> apps) async {
+    List<String> blockedApps = apps['blocked_user_apps'] ?? [];
+    List<String> allowedApps = apps['allowed_user_apps'] ?? [];
+
+    if (blockedApps.isEmpty && allowedApps.isEmpty) {
+      logger.i('No user apps to block or unblock.');
+      return;
+    }
+
+    // Block user apps
+    for (String packageName in blockedApps) {
+      logger.i("Attempting to block user app: $packageName");
+      try {
+        await updateAppOnDevice({'package_name': packageName, 'is_allowed': false});
+      } catch (e) {
+        logger.e('Failed to block user app: $packageName, Error: $e');
+      }
+    }
+
+    // Unblock user apps
+    for (String packageName in allowedApps) {
+      logger.i("Attempting to unblock user app: $packageName");
+      try {
+        await updateAppOnDevice({'package_name': packageName, 'is_allowed': true});
+      } catch (e) {
+        logger.e('Failed to unblock user app: $packageName, Error: $e');
+      }
+    }
+
+    logger.i('All user apps processed for blocking and unblocking.');
+  }
+
+  // Apply PIN locking for system apps
+  Future<void> applyPinLockForSystemApps(List<String> pinLockedApps) async {
+    if (pinLockedApps.isEmpty) {
+      logger.i('No system apps to lock with PIN.');
+      return;
+    }
+
+    for (String packageName in pinLockedApps) {
+      logger.i("Applying PIN lock for system app: $packageName");
+      try {
+        final result = await platform.invokeMethod('pinLockApp', {
+          'package_name': packageName,
+          'is_pin_locked': true,
+        });
+
+        logger.i("PIN lock applied successfully for app: $packageName, result: $result");
+      } catch (e) {
+        logger.e("Failed to apply PIN lock for system app: $packageName, Error: $e");
+      }
+    }
+  }
+
+  // Fetch and apply app settings (blocking for user apps and PIN locking for system apps)
+  Future<void> fetchAndApplyAppSettings(String childId) async {
+    logger.i('Fetching apps for childId: $childId');
+
+    // Fetch apps from the backend
+    Map<String, dynamic> apps = await fetchApps(childId);
+
+    if (apps.isEmpty) {
+      logger.i('No apps to block, unblock, or PIN lock.');
+      return;
+    }
+
+    // Apply blocking/unblocking of user apps
+    await applyUserAppSettings(apps);
+
+    // Apply PIN locking of system apps
+    await applyPinLockForSystemApps(apps['pin_locked_system_apps'] ?? []);
+
+    logger.i('App settings (user apps and system apps) applied successfully.');
+  }
+}
+*/
+/* e update kay e integrate and app time
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'config.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
+
+class AppManagementService {
+  static const platform = MethodChannel('com.example.app/block');
+
   // Fetch the apps from the app_management collection
 Future<Map<String, List<String>>> fetchApps(String childId) async {
   final url = Uri.parse('${Config.baseUrl}/api/fetch-apps?childId=$childId');
@@ -174,7 +528,7 @@ Future<void> applyAppSettings(Map<String, List<String>> apps) async {
     }
   }
 }
-
+*/
 /* mugana ni makakuha na ug list sa apps na block and not ang problema (INVALID_PACKAGE, Package name or isAllowed status is null, null, null)
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;

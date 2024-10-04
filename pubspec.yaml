@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
-  logger: ^2.4.0 # This was missing from the original file, adding it to the correct section
+  logger: ^2.4.0 
   intl: ^0.19.0
   flutter_spinkit: ^5.2.1
   device_info_plus: ^10.1.2
@@ -22,6 +22,8 @@ dependencies:
   flutter_svg: ^2.0.10+1
   flutter_dotenv: ^5.1.0
   permission_handler: ^11.3.1
+  flutter_datetime_picker: ^1.4.0 
+  logging: ^1.2.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.13.1
@@ -42,3 +44,4 @@ flutter:
     - assets/image2.png
     - assets/success.png
     - assets/famie_icon.png
+    - assets/famie_icon-removebg-preview.png
