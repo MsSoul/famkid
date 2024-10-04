@@ -1,4 +1,152 @@
 // filename: services/remaining_time_service.dart
+// filename: services/remaining_time_service.dart
+import 'package:mongo_dart/mongo_dart.dart';
+import '../algorithm/tokenbucket.dart';
+
+class RemainingTimeService {
+  final DbCollection remainingTimeCollection;
+  final DbCollection timeManagementCollection;
+  final int maxTime; // Maximum allowable time in seconds
+  final int refillRate; // Refill rate per second
+
+  RemainingTimeService(
+    this.remainingTimeCollection,
+    this.timeManagementCollection, {
+    required this.maxTime,
+    required this.refillRate,
+  });
+
+  // Fetch the TokenBucket for a specific slot, adjusting for actual time passed and device time
+  Future<TokenBucket> getTokenBucket(ObjectId slotIdentifier, DateTime deviceTime) async {
+    final document = await remainingTimeCollection.findOne(where.eq('slot_identifier', slotIdentifier));
+    if (document == null) {
+      throw Exception("Slot not found.");
+    }
+
+    final int remainingTime = document['remaining_time'] ?? maxTime;
+    final DateTime lastUpdated = document['timestamp']?.toDate() ?? DateTime.now();
+
+    // Create a new TokenBucket
+    final TokenBucket bucket = TokenBucket(capacity: maxTime, refillRate: refillRate);
+    bucket.tokens = remainingTime; // Set the current remaining time
+    bucket.lastRefill = lastUpdated; // Set the last refill time
+
+    // Adjust tokens based on actual time passed
+    final int timeDifferenceInSeconds = deviceTime.difference(lastUpdated).inSeconds;
+    bucket.tokens = (bucket.tokens + (timeDifferenceInSeconds * refillRate)).clamp(0, maxTime);
+
+    return bucket;
+  }
+
+  // Update the remaining time in the database
+  Future<void> updateRemainingTime(ObjectId slotIdentifier, TokenBucket bucket) async {
+    await remainingTimeCollection.update(
+      where.eq('slot_identifier', slotIdentifier),
+      modify.set('remaining_time', bucket.getRemainingTime()).set('timestamp', DateTime.now()),
+    );
+  }
+
+  // Use time from the bucket and update the remaining time based on actual device time
+  Future<void> useTime(ObjectId slotIdentifier, int deltaTime, DateTime deviceTime) async {
+    final bucket = await getTokenBucket(slotIdentifier, deviceTime);
+
+    // Deduct used time in seconds, ensuring not to go below zero
+    if (bucket.tokens > 0) {
+      bucket.tokens -= deltaTime; // Deduct used time
+      await updateRemainingTime(slotIdentifier, bucket);
+    } else {
+      // Handle scenario when remaining time is zero
+      await zeroOutRemainingTime(slotIdentifier);
+    }
+  }
+
+  // Reset the slot to the max time
+  Future<void> resetSlot(ObjectId slotIdentifier) async {
+    final bucket = TokenBucket(capacity: maxTime, refillRate: refillRate);
+    bucket.resetRemainingTime(); // Reset to full time (max tokens)
+    await updateRemainingTime(slotIdentifier, bucket);
+  }
+
+  // Sync time slots with remaining time for a specific child, using the actual device clock
+  Future<void> syncTimeSlotsWithRemainingTime(dynamic childId, DateTime deviceTime) async {
+    final timeManagementDoc = await timeManagementCollection.findOne(where.eq('child_id', childId));
+
+    if (timeManagementDoc != null && timeManagementDoc['time_slots'] != null) {
+      final List<dynamic> timeSlots = timeManagementDoc['time_slots'];
+
+      for (var timeSlot in timeSlots) {
+        final slotIdentifier = ObjectId.parse(timeSlot['slot_identifier']);
+        final int allowedTime = timeSlot['allowed_time'] ?? maxTime; // allowedTime could be maxTime if not provided
+        final String endTime = timeSlot['end_time'];
+
+        final DateTime now = deviceTime; // Use the device time passed
+        final DateTime slotEndTime = DateTime.parse(endTime);
+
+        // If time has passed the slot end time, zero out remaining time
+        if (now.isAfter(slotEndTime)) {
+          await zeroOutRemainingTime(slotIdentifier);
+        } else {
+          // Otherwise, sync the remaining time based on allowed time
+          await remainingTimeCollection.update(
+            where.eq('slot_identifier', slotIdentifier),
+            modify
+                .set('remaining_time', allowedTime)
+                .set('timestamp', deviceTime),
+            upsert: true,
+          );
+        }
+      }
+    } else {
+      throw Exception("No time slots found for child: $childId");
+    }
+  }
+
+  // Function to zero out remaining time if the slot end time has passed
+  Future<void> zeroOutRemainingTime(dynamic slotIdentifier) async {
+    final bucket = await getTokenBucket(slotIdentifier, DateTime.now());
+
+    if (bucket.getRemainingTime() > 0) {
+      bucket.tokens = 0;
+      await updateRemainingTime(slotIdentifier, bucket);
+    }
+  }
+
+  // Sync remaining time for a specific child based on actual device time
+  Future<void> syncRemainingTimeWithDeviceTime(dynamic childId, DateTime deviceTime) async {
+    final timeManagementDoc = await timeManagementCollection.findOne(where.eq('child_id', childId));
+
+    if (timeManagementDoc != null && timeManagementDoc['time_slots'] != null) {
+      final List<dynamic> timeSlots = timeManagementDoc['time_slots'];
+
+      for (var timeSlot in timeSlots) {
+        final slotIdentifier = ObjectId.parse(timeSlot['slot_identifier']);
+        final int allowedTime = timeSlot['allowed_time'] ?? maxTime;
+        final String endTime = timeSlot['end_time'];
+
+        final DateTime now = deviceTime; // Use the device time passed
+        final DateTime slotEndTime = DateTime.parse(endTime);
+
+        // If time has passed the slot end time, zero out remaining time
+        if (now.isAfter(slotEndTime)) {
+          await zeroOutRemainingTime(slotIdentifier);
+        } else {
+          // Otherwise, sync the remaining time based on allowed time
+          await remainingTimeCollection.update(
+            where.eq('slot_identifier', slotIdentifier),
+            modify
+                .set('remaining_time', allowedTime)
+                .set('timestamp', deviceTime),
+            upsert: true,
+          );
+        }
+      }
+    } else {
+      throw Exception("No time slots found for child: $childId");
+    }
+  }
+}
+
+/*
 import 'package:mongo_dart/mongo_dart.dart';
 import '../algorithm/tokenbucket.dart';
 
@@ -111,7 +259,7 @@ class RemainingTimeService {
     }
   }
 }
-
+*/
 /*
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart';
