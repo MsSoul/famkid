@@ -32,6 +32,7 @@ class LockScreenState extends State<LockScreen> {
   final FocusNode pin3FocusNode = FocusNode();
   final FocusNode pin4FocusNode = FocusNode();
 
+  String _enteredPin = '';  // Store entered PIN
   bool _isLoading = false;
 
   @override
@@ -48,9 +49,9 @@ class LockScreenState extends State<LockScreen> {
   }
 
   Future<void> _verifyPin() async {
-    // Capture the entered PIN from all 4 fields
-    String fullPin = pin1Controller.text + pin2Controller.text + pin3Controller.text + pin4Controller.text;
-    logger.i('Entered PIN: $fullPin');  // Log the entered PIN before masking
+    // Combine the entered PIN from the stored variable
+    String fullPin = _enteredPin;
+    logger.i('Entered PIN: $fullPin');  // Log the entered PIN
 
     // Ensure PIN is exactly 4 digits long and only contains numbers
     if (fullPin.length == 4 && RegExp(r'^\d{4}$').hasMatch(fullPin)) {
@@ -124,6 +125,7 @@ class LockScreenState extends State<LockScreen> {
       pin2Controller.clear();
       pin3Controller.clear();
       pin4Controller.clear();
+      _enteredPin = '';  // Clear the stored PIN
     });
   }
 
@@ -188,10 +190,10 @@ class LockScreenState extends State<LockScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildPinBox(pin1Controller, pin1FocusNode, pin2FocusNode, appBarColor),
-                  _buildPinBox(pin2Controller, pin2FocusNode, pin3FocusNode, appBarColor),
-                  _buildPinBox(pin3Controller, pin3FocusNode, pin4FocusNode, appBarColor),
-                  _buildPinBox(pin4Controller, pin4FocusNode, null, appBarColor),
+                  _buildPinBox(pin1Controller, pin1FocusNode, pin2FocusNode, appBarColor, 0),
+                  _buildPinBox(pin2Controller, pin2FocusNode, pin3FocusNode, appBarColor, 1),
+                  _buildPinBox(pin3Controller, pin3FocusNode, pin4FocusNode, appBarColor, 2),
+                  _buildPinBox(pin4Controller, pin4FocusNode, null, appBarColor, 3),
                 ],
               ),
               const SizedBox(height: 20),
@@ -216,7 +218,7 @@ class LockScreenState extends State<LockScreen> {
   }
 
   // Method to build a PIN input box
-  Widget _buildPinBox(TextEditingController controller, FocusNode currentNode, FocusNode? nextNode, Color? pinColor) {
+  Widget _buildPinBox(TextEditingController controller, FocusNode currentNode, FocusNode? nextNode, Color? pinColor, int index) {
     return SizedBox(
       width: 60,
       child: TextField(
@@ -236,7 +238,15 @@ class LockScreenState extends State<LockScreen> {
         onChanged: (value) {
           if (value.isNotEmpty && RegExp(r'^\d$').hasMatch(value)) {
             logger.i('Entered digit: $value');
-            
+
+            // Add the entered digit to the stored PIN
+            if (index < _enteredPin.length) {
+              _enteredPin = _enteredPin.substring(0, index) + value;
+            } else {
+              _enteredPin += value;
+            }
+
+            // Automatically move to the next field or verify the PIN when all fields are filled
             if (nextNode != null) {
               FocusScope.of(context).requestFocus(nextNode);  // Move to the next field
             } else {
@@ -244,8 +254,9 @@ class LockScreenState extends State<LockScreen> {
               _verifyPin();  // Automatically verify when the last digit is entered
             }
 
+            // Mask the input after 1.5 seconds
             Timer(const Duration(milliseconds: 1500), () {
-              controller.text = "*";  // Mask the input with "*" after a 1.5-second delay
+              controller.text = "*";  // Mask the input with "*"
               controller.selection = TextSelection.fromPosition(
                 TextPosition(offset: controller.text.length),
               );

@@ -81,7 +81,7 @@ class ProtectionService {
         // Handle the case when no remaining time is found
         debugPrint('No remaining time found for childId $childId.');
         if (!context.mounted) return;
-        _showErrorDialog(context, 'No remaining time found for this child.');
+        _showErrorDialog(context, 'Please set a Screen Time Schedule first.'); // Updated error message
       } else {
         // Log any non-200 response
         debugPrint('Failed to fetch remaining time. Status code: ${response.statusCode}');
@@ -91,7 +91,7 @@ class ProtectionService {
       // Log any error encountered
       debugPrint('Error applying protection for childId $childId: $e');
       if (!context.mounted) return;
-      _showErrorDialog(context, e.toString());  // Show error dialog in case of exception
+      _showErrorDialog(context, 'An error occurred. Please try again later.');  // General error message
     }
   }
 
@@ -212,7 +212,7 @@ class ProtectionService {
               ),
               const SizedBox(height: 20),
               Text(
-                errorMessage,
+                errorMessage, // Updated message here
                 style: const TextStyle(fontSize: 16.0),
                 textAlign: TextAlign.center,
               ),
@@ -238,6 +238,7 @@ class ProtectionService {
     );
   }
 }
+
 
 /*e modify kay e  interagte na abg app management
 // filename: services/protection_service.dart
