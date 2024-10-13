@@ -1,5 +1,5 @@
 // filename: deactivation_service.dart
-import 'package:http/http.dart' as http;
+/*import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:logger/logger.dart';
 import 'config.dart';  // Assuming Config contains your base URL
@@ -27,3 +27,4 @@ class DeactivationService {
     }
   }
 }
+*/
