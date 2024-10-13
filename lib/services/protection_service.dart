@@ -1,4 +1,5 @@
 // Filename: services/protection_service.dart
+// Filename: services/protection_service.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -25,7 +26,22 @@ class ProtectionService {
         final Map<String, dynamic> data = jsonDecode(response.body);
         final List<dynamic> timeSlots = data['time_slots'] ?? [];
 
-        // Loop through the time slots to find the current one
+        // Display all the time slots for the child
+        debugPrint('Child ID: $childId');
+        for (int i = 0; i < timeSlots.length; i++) {
+          final slot = timeSlots[i];
+          final String? startTime = slot['start_time'];
+          final String? endTime = slot['end_time'];
+          final int remainingTime = slot['remaining_time'] ?? 0;
+
+          debugPrint('Slot #${i + 1}:');
+          debugPrint('Start Time: $startTime');
+          debugPrint('End Time: $endTime');
+          debugPrint('Remaining Time: $remainingTime');
+          debugPrint('-----------------------------------');
+        }
+
+        // Proceed with protection logic
         bool isWithinAnyTimeSlot = false;
         for (var slot in timeSlots) {
           final String? startTime = slot['start_time'];
@@ -259,6 +275,7 @@ class ProtectionService {
     );
   }
 }
+
 
 /*
 import 'package:flutter/material.dart';
