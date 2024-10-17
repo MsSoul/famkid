@@ -7,7 +7,8 @@ import 'services/theme_service.dart';
 import 'design/theme.dart';
 import 'home.dart';
 import 'child_signup_form.dart';
-import 'http_overrides.dart'; // Import the HttpOverrides
+import 'http_overrides.dart';
+import 'forgot_password.dart';
 
 Future<void> main() async {
   var logger = Logger();
@@ -276,7 +277,30 @@ class LoginScreenState extends State<LoginScreen> with SingleTickerProviderState
                       ),
                     ),
                   ],
-                ),
+                ),// Below the login button, add this row to your LoginScreen widget.
+Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+        );
+      },
+      child: Text(
+        "Forgot Password?",
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16.0,
+          color: appBarColor, // Use the AppBar color for this link
+          decoration: TextDecoration.underline,
+        ),
+      ),
+    ),
+  ],
+),
+
               ],
             ),
           ),
