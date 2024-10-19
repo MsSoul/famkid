@@ -1,7 +1,7 @@
-//filename: forgot_password.dart
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
 import 'design/theme.dart';
+import 'main.dart'; // Import the main.dart to access LoginScreen
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -38,8 +38,7 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       'Enter your email to reset your password',
                       style: TextStyle(
                         fontSize: 18.0,
-                        fontFamily:
-                            theme.textTheme.bodyLarge?.fontFamily ?? 'Georgia',
+                        fontFamily: theme.textTheme.bodyLarge?.fontFamily ?? 'Georgia',
                         color: textColor,
                       ),
                     ),
@@ -127,7 +126,11 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context).pop(); 
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()), // Navigate back to the login screen
+                );
               },
             ),
           ],
@@ -136,4 +139,3 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 }
-
