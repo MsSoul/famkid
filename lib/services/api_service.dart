@@ -102,7 +102,7 @@ class ApiService {
 
     try {
       final response = await http.post(
-        Uri.parse('${Config.baseUrl}/api/forgot-password'),  // Endpoint for forgot password
+        Uri.parse('${Config.baseUrl}/api/forgot-password'),  
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email}),
       );
