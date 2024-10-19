@@ -1,5 +1,4 @@
 // filename: qr_code_screen.dart
-// filename: qr_code_screen.dart
 import 'package:flutter/material.dart';
 import 'package:barcode/barcode.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -153,7 +152,7 @@ void _generateSvg() {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: <Widget>[
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 9.0, top: 16.0),
+                      padding: const EdgeInsets.only(bottom: 9.0, top: 12.0),
                       child: Text(
                         'Create your child\'s profile by scanning this',
                         style: TextStyle(
@@ -219,7 +218,7 @@ void _generateSvg() {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 10),
                     Text(
                       'Device Name',
                       style: TextStyle(
@@ -233,13 +232,13 @@ void _generateSvg() {
                     Text(
                       widget.deviceName,
                       style: TextStyle(
-                        fontSize: 22.0,
+                        fontSize: 18.0,
                         fontFamily: fontFamily, // Follow theme font style
                         fontWeight: FontWeight.bold,
                         color: appBarColor, // Use AppBar color
                       ),
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 10),
                     Text(
                       'Android ID',
                       style: TextStyle(
@@ -253,13 +252,13 @@ void _generateSvg() {
                     Text(
                       widget.androidId,
                       style: TextStyle(
-                        fontSize: 22.0,
+                        fontSize: 18.0,
                         fontFamily: fontFamily, // Follow theme font style
                         fontWeight: FontWeight.bold,
                         color: appBarColor, // Use AppBar color
                       ),
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 20),
                     if (connectionSuccessful)
                       ElevatedButton(
                         onPressed: () {

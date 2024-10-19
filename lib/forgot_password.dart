@@ -1,6 +1,7 @@
+//filename: forgot_password.dart
 import 'package:flutter/material.dart';
-import 'services/api_service.dart'; 
-import 'design/theme.dart'; 
+import 'services/api_service.dart';
+import 'design/theme.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -11,34 +12,35 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   TextEditingController emailController = TextEditingController();
-  final _formKey = GlobalKey<FormState>(); 
-  ApiService apiService = ApiService(); 
-  bool _isLoading = false; 
+  final _formKey = GlobalKey<FormState>();
+  ApiService apiService = ApiService();
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); 
+    final theme = Theme.of(context);
     final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
 
     return Scaffold(
-      appBar: customAppBar(context, 'Forgot Password'), 
+      appBar: customAppBar(context, 'Forgot Password'),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: SingleChildScrollView( // Added to allow scrolling if needed
+        child: SingleChildScrollView(
           child: Column(
             children: [
-              const SizedBox(height: 50), // Spacer to push content upwards
+              const SizedBox(height: 50),
               Form(
                 key: _formKey,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, // Align items to the start (left)
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Enter your email to reset your password',
                       style: TextStyle(
                         fontSize: 18.0,
-                        fontFamily: theme.textTheme.bodyLarge?.fontFamily ?? 'Georgia', 
-                        color: textColor, 
+                        fontFamily:
+                            theme.textTheme.bodyLarge?.fontFamily ?? 'Georgia',
+                        color: textColor,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -57,12 +59,14 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                     const SizedBox(height: 20),
                     _isLoading
-                        ? const Center(child: CircularProgressIndicator()) 
+                        ? const Center(child: CircularProgressIndicator())
                         : ElevatedButton(
                             onPressed: _resetPassword,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: theme.elevatedButtonTheme.style?.backgroundColor?.resolve({}), 
-                            ), 
+                              backgroundColor: theme
+                                  .elevatedButtonTheme.style?.backgroundColor
+                                  ?.resolve({}),
+                            ),
                             child: const Text('Reset Password'),
                           ),
                   ],
@@ -78,12 +82,12 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _resetPassword() async {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() {
-        _isLoading = true; 
+        _isLoading = true;
       });
 
       final email = emailController.text;
       try {
-        var result = await apiService.resetPassword(email); 
+        var result = await apiService.resetPassword(email);
         if (result) {
           _showDialog('Password reset link sent to $email');
         } else {
@@ -100,15 +104,28 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   void _showDialog(String message) {
+    final theme = Theme.of(context);
+    final appBarColor = theme.appBarTheme.backgroundColor ?? Colors.blue; // App bar color fallback
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+            side: BorderSide(color: appBarColor, width: 2.0),
+          ),
           title: const Text('Forgot Password'),
           content: Text(message),
           actions: <Widget>[
             TextButton(
-              child: const Text('OK'),
+              child: Text(
+                'OK',
+                style: TextStyle(
+                  color: appBarColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -119,3 +136,4 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 }
+
