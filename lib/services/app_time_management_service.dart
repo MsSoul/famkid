@@ -1,4 +1,67 @@
 // filename: services/app_time_management_service.dart
+// filename: services/app_time_management_service.dart
+import 'package:mongo_dart/mongo_dart.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:logging/logging.dart';
+
+class AppTimeManagementService {
+  final DbCollection remainingAppTimeCollection;
+  final DbCollection appTimeManagementCollection;
+  final Logger _logger = Logger('AppTimeManagementService');
+  final WebSocketChannel channel;
+
+  AppTimeManagementService({
+    required this.remainingAppTimeCollection,
+    required this.appTimeManagementCollection,
+    required this.channel,
+  });
+
+  // Sync app time slots with remaining time
+  Future<void> syncAppTimeSlotsWithRemainingTime(ObjectId childId) async {
+    final timeManagementDoc = await appTimeManagementCollection.findOne(where.eq('child_id', childId));
+
+    if (timeManagementDoc != null && timeManagementDoc['app_time_slots'] != null) {
+      final List<dynamic> timeSlots = timeManagementDoc['app_time_slots'];
+
+      for (var timeSlot in timeSlots) {
+        final slotIdentifier = ObjectId.fromHexString(timeSlot['slot_identifier']);
+        final int allowedTime = timeSlot['allowed_time'] ?? 3600;
+        final String endTime = timeSlot['end_time'];
+
+        final DateTime now = DateTime.now();
+        final DateTime slotEndTime = DateTime.parse(endTime);
+
+        if (now.isAfter(slotEndTime)) {
+          await zeroOutRemainingTime(slotIdentifier);
+        } else {
+          await remainingAppTimeCollection.update(
+            where.eq('slot_identifier', slotIdentifier),
+            modify.set('remaining_time', allowedTime).set('timestamp', DateTime.now()),
+            upsert: true,
+          );
+        }
+      }
+    }
+  }
+
+  // Zero out remaining time if time has passed
+  Future<void> zeroOutRemainingTime(ObjectId slotIdentifier) async {
+    await remainingAppTimeCollection.update(
+      where.eq('slot_identifier', slotIdentifier),
+      modify.set('remaining_time', 0).set('timestamp', DateTime.now()),
+    );
+  }
+
+  // Listen for real-time updates
+  void listenForRealTimeUpdates(ObjectId childId) {
+    channel.stream.listen((event) async {
+      _logger.info("Detected update in app time management.");
+      await syncAppTimeSlotsWithRemainingTime(childId);
+    });
+  }
+}
+
+/*e update and app time remaining app time
 import 'package:mongo_dart/mongo_dart.dart';
 
 class AppTimeManagementService {
@@ -79,7 +142,7 @@ class AppTimeManagementService {
     }
   }
 }
-
+*/
 /*import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mongo_dart/mongo_dart.dart';
