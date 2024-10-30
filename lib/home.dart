@@ -1,5 +1,245 @@
 import 'package:flutter/material.dart';
 import 'design/theme.dart';
+import 'functions/device_info.dart';
+import 'services/device_info_service.dart';
+import 'services/app_list_service.dart';
+import 'qr_code_screen.dart';
+import 'main.dart';
+import 'design/notification_prompts.dart';
+
+class HomeScreen extends StatefulWidget {
+  final String childId;
+
+  const HomeScreen({super.key, required this.childId});
+
+  @override
+  HomeScreenState createState() => HomeScreenState();
+}
+
+class HomeScreenState extends State<HomeScreen> {
+  final DeviceInfoService _deviceInfoService = DeviceInfoService();
+  final AppListService _appListService = AppListService();
+  bool _showLoadingMessage = false; // New flag for loading message
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final appBarColor = theme.appBarTheme.backgroundColor ?? Colors.green;
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final fontFamily = theme.textTheme.bodyLarge?.fontFamily ?? 'Georgia';
+    final buttonColor = theme.elevatedButtonTheme.style?.backgroundColor?.resolve({}) ?? Colors.green;
+
+    return Scaffold(
+      appBar: customAppBar(context, 'Home Screen', isLoggedIn: true),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 20),
+            Text(
+              'Welcome!',
+              style: TextStyle(
+                fontSize: 32.0,
+                fontWeight: FontWeight.bold,
+                fontFamily: fontFamily,
+                color: textColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            RichText(
+              text: TextSpan(
+                text: 'Allow ',
+                style: TextStyle(
+                  fontSize: 18.0,
+                  color: textColor,
+                  fontFamily: fontFamily,
+                ),
+                children: <TextSpan>[
+                  TextSpan(
+                    text: 'Famie',
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      color: appBarColor,
+                      fontFamily: fontFamily,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' to report this device\'s activity, which enables you to supervise your child\'s screen time.',
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      color: textColor,
+                      fontFamily: fontFamily,
+                    ),
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 40),
+            Text(
+              'Allow Accessibility?',
+              style: TextStyle(
+                fontSize: 24.0,
+                fontWeight: FontWeight.bold,
+                fontFamily: fontFamily,
+                color: textColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 120,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      showNoButtonPrompt(context);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: buttonColor,
+                        width: 2.0,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    ),
+                    child: Text(
+                      'No',
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        color: textColor,
+                        fontFamily: fontFamily,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                SizedBox(
+                  width: 120,
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      setState(() {
+                        _showLoadingMessage = true; // Show loading message
+                      });
+                      await _handleAllowPressed();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: buttonColor,
+                      side: BorderSide(
+                        color: buttonColor,
+                        width: 2.0,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    ),
+                    child: const Text(
+                      'Allow',
+                      style: TextStyle(fontSize: 16.0, color: Colors.black, fontFamily: 'Georgia'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_showLoadingMessage) // Display the loading message
+              Padding(
+                padding: const EdgeInsets.only(top: 50),
+                child: Container(
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: appBarColor, width: 2.0),
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: Text(
+                    'Please wait. This takes a few seconds.',
+                    style: TextStyle(
+                      fontSize: 16.0,
+                      color: textColor,
+                      fontFamily: fontFamily,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleAllowPressed() async {
+    if (!mounted) return;
+
+    _deviceInfoService.logger.i('Allow button pressed');
+
+    try {
+      Map<String, String> deviceInfo = await getDeviceInfo();
+      String deviceName = deviceInfo['deviceName']!;
+      String macAddress = deviceInfo['macAddress']!;
+      String androidId = deviceInfo['androidId']!;
+
+      _deviceInfoService.logger.i('Device Info: $deviceName, $macAddress, $androidId');
+
+      await _deviceInfoService.sendDeviceInfo(context, widget.childId, deviceName);
+
+      List<Map<String, dynamic>> apps = await _appListService.getInstalledApps();
+      List<Map<String, dynamic>> systemApps = apps.where((app) => app['isSystemApp'] == true).toList();
+      List<Map<String, dynamic>> userApps = apps.where((app) => app['isSystemApp'] == false).toList();
+
+      await _appListService.sendAppList(context, widget.childId, systemApps, userApps);
+
+      if (!mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QrCodeScreen(
+            childId: widget.childId,
+            macAddress: macAddress,
+            deviceName: deviceName,
+            androidId: androidId,
+          ),
+        ),
+      );
+    } catch (error) {
+      _deviceInfoService.logger.e('Error occurred during the process: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to process: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _showLoadingMessage = false; // Hide loading message
+        });
+      }
+    }
+  }
+
+  void _logout(BuildContext context) {
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  }
+}
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+
+
+/*import 'package:flutter/material.dart';
+import 'design/theme.dart';
 import 'functions/device_info.dart'; // Your device info function
 import 'services/device_info_service.dart';
 import 'services/app_list_service.dart';
@@ -214,7 +454,7 @@ class HomeScreenState extends State<HomeScreen> {
 }
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
+*/
 /*
 import 'package:flutter/material.dart';
 import 'design/theme.dart';
